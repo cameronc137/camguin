@@ -2,7 +2,7 @@
 #include <iostream>
 #include "camguin.hh"
 using namespace std;
-void writeResults(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum"){
+void writeExample(runNumber = 0, TString valueName = "value", Double_t value = 0.0){
   TString channel = tree + "_" + branch + "_" + leaf;
   // Make an instance of the relevant data source 
   TLeaf   *Leaf   = getLeaf_h();
