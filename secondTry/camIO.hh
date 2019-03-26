@@ -21,6 +21,50 @@ Int_t getNruns_h(Int_t n_runs = -1){
   return n_runs;
 }
 
+TString getRootFile_h(Int_t runNumber = 0){
+// Get environment variable rootfile name
+  runNumber = getRunNumber_h(runNumber);
+  TString rootfilename = " ";
+
+  string fnmRoot="/adaq1/work1/apar/japanOutput";
+  if(gSystem->Getenv("QW_ROOTFILES"))
+    fnmRoot = gSystem->Getenv("QW_ROOTFILES");
+  else
+    //Printf("QW_ROOTFILES env variable was not found going with default: %s\n",fnmRoot.c_str());
+
+  //Printf(" Looking for file with runNumber %d in %s\n",runNumber,fnmRoot.c_str());
+
+  DIR *dirSearch;
+  struct dirent *entSearch;
+  const string daqConfigs[4] = {"CH","INJ","ALL","_tedf"};
+  int found=0;
+  string partialname = " ";
+  if ((dirSearch = opendir (fnmRoot.c_str())) != NULL) {
+    while ((entSearch = readdir (dirSearch)) != NULL) {
+      for(int i=0;i<4;i++){
+        partialname = Form("prex%s_%d.root",daqConfigs[i].c_str(),runNumber);
+        //if(fMonitor)
+        //  partialname = Form("prex%s_%d.adaq3",daqConfigs[i].c_str(),runNumber);
+        std::string fullname = entSearch->d_name;
+        if(fullname.find(partialname) != std::string::npos){
+          rootfilename = fnmRoot + "/" + fullname;
+          found++;
+        }
+      }
+      if(found) break;
+    }
+    closedir (dirSearch);
+  }
+
+  if(found){
+    //Printf("\t found file %s\n",(const char*)rootfilename);
+    ////fRunNumber = runNumber;
+  }else{
+    //Printf("double check your configurations and files. Quitting\n");
+  }
+  return rootfilename;
+}
+      
 TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1, TString filenamebase = "Rootfiles/"){
 
   TString filename = "NULL";
@@ -29,11 +73,11 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
   filenamebase = gSystem->Getenv("QW_ROOTFILES");
   TChain *chain = new TChain(tree);
 
-  for(Int_t i = 0; i <= (n_runs); i++){
+  for(Int_t i = 0; i < (n_runs); i++){
 
-    filenamebase = Form("%s/prex_tedf_%d.root",(const char *) filenamebase,runNumber+i);
-    filename=filenamebase;
-    
+    //filenamebase = Form("%s/prex_tedf_%d.root",(const char *) filenamebase,runNumber+i);
+    filenamebase = getRootFile_h(runNumber+i);
+    filename     = filenamebase;
     filenamebase.Remove(filenamebase.Last('.'),5);
     
     int split = 0;
@@ -47,20 +91,20 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
   //printf("N Entries: %d\n",(int)chain->GetEntries());
   return chain;
 }
-TBranch * getBranch_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", Int_t runNumber = 0, Int_t nRuns = -1){
+TBranch * getBranch_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", Int_t runNumber = 0, Int_t nRuns = -1, TString filenamebase = "Rootfiles/"){
   //Printf("Found leaf: \"%s\"\n",(const char*)(tree+"."+branch+"."+leaf));
   runNumber = getRunNumber_h(runNumber);
   nRuns     = getNruns_h(nRuns);
-  TChain  * Chain   = getTree_h(tree, runNumber, nRuns);
+  TChain  * Chain   = getTree_h(tree, runNumber, nRuns, filenamebase);
   TBranch * Branch  = Chain->GetBranch(branch);
   return Branch;
 }
 
-TLeaf * getLeaf_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1){
+TLeaf * getLeaf_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1, TString filenamebase = "Rootfiles/"){
   //Printf("Found leaf: \"%s\"\n",(const char*)(tree+"."+branch+"."+leaf));
   runNumber = getRunNumber_h(runNumber);
   nRuns     = getNruns_h(nRuns);
-  TChain  * Chain   = getTree_h(tree, runNumber, nRuns);
+  TChain  * Chain   = getTree_h(tree, runNumber, nRuns, filenamebase);
   TBranch * Branch  = Chain->GetBranch(branch);
   TLeaf   * Leaf    = Branch->GetLeaf(leaf);
   return Leaf;
