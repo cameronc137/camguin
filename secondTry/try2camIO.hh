@@ -31,17 +31,16 @@ Int_t getNruns_h(Int_t n_runs = -1){
   return n_runs;
 }
 
-void getAggregateVars_h(TTree * rootTree, std::vector<TString>* aggVars, std::vector<Double_t>* oldValues, std::vector<Double_t>* newValues) 
+std::vector<TString> getAggregateVars_h(TTree * rootTree) 
 {
 
   // Utility to find all of the variables (leaf's/branches) within a
   // Specified TTree and put them within the aggVars vector.
   // It is possible to generalize this up a level to loop over 
   // a vector full of TTrees, but for now lets assume just one tree
-  //std::vector<TString> aggVars;
-  //aggVars->clear();
+  std::vector<TString> aggVars;
+  aggVars.clear();
 
-  Printf("Reading tree %s\n",(const char*)rootTree->GetName());
   TObjArray *branchList = rootTree->GetListOfBranches();
   TIter next(branchList);
   TBranch *brc;
@@ -49,23 +48,14 @@ void getAggregateVars_h(TTree * rootTree, std::vector<TString>* aggVars, std::ve
   while((brc=(TBranch*)next())!=0) {
     TString found = brc->GetName();
     // Not sure if the line below is so smart...
-    aggVars->push_back(found);
-    Printf("In branch %s\n",(const char*)found);
-    oldValues->push_back(-389898.0);
-    newValues->push_back(-387878.0);
+    aggVars.push_back(found);
   }
 
-  for(Int_t iBranch = 0; iBranch < aggVars->size(); iBranch++) {
-    Printf("In branch %d : %s\n",iBranch,(const char*)&aggVars[iBranch]);
-  }
+  //for(Int_t iBranch = 0; iBranch < aggVars.size(); iBranch++) {
+    //Printf("In branch %d : %s\n",iBranch,(const char*)aggVars[iBranch]);
+  //}
+  return aggVars;
 }
-void addAggregateVars_h(TString varName, std::vector<TString>* aggVars, std::vector<Double_t>* oldValues){
-
-  Printf("Push back %s",(const char*)varName);
-  aggVars->push_back(varName);
-  oldValues->push_back(-989898.0);
-}
-
       
 TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1, TString filenamebase = "Rootfiles/"){
 
@@ -147,12 +137,8 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   Double_t value  = new_value;
   std::vector<Double_t> oldOtherValues;
   std::vector<Double_t> newOtherValues;
-  std::vector<TBranch*> new_otherValuesBranch;
+  //std::vector<TBranch*> new_otherValuesBranch;
   std::vector<TString> branchList;
-  oldOtherValues.clear();
-  newOtherValues.clear();
-  new_otherValuesBranch.clear();
-  branchList.clear();
   Int_t newBranch = 0;
 
   if (bNewFile) {
@@ -165,17 +151,12 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
     // Open existing file and copy the existing branches that aren't being
     // updated so that we can preserve the tree structure
     oldTree    = (TTree*) aggregatorFile->Get("agg");
-    //branchList = getAggregateVars_h(oldTree);
+    branchList = getAggregateVars_h(oldTree);
     if (!(std::find(branchList.begin(),branchList.end(),valueName)!=branchList.end())){
       Printf("User adding new branch: %s\n",(const char*)valueName);
       branchList.push_back(valueName);
       newBranch = 1;
     }
-  //  else{
-  //    Printf("User adding new test branch\n");
-  //    branchList.push_back("test");
-  //    newBranch = 0;
-  //  }
     //branchList.push_back("test");
     Printf("Appending to aggregator tree\n");
     //copyTree = oldTree->CloneTree();
@@ -186,7 +167,14 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
     newTree = new TTree("agg","Aggregator Tree");
     //newTree = copyTree->CloneTree(0);
 
-    for (Int_t k = 0; k < branchList.size(); k++){
+    auto ItA1 = branchList.begin();
+    auto ItB1 = oldOtherValues.begin();
+    auto ItC1 = newOtherValues.begin();
+    while(ItA1 != branchList.end()){// || ItB1 != oldOtherValues.end() || ItC1 != newOtherValues.end()){
+      if(ItA1 != branchList.end()) ++ItA1;
+      if(ItB1 != oldOtherValues.end()) ++ItB1;
+      if(ItC1 != newOtherValues.end()) ++ItC1;
+    //for (Int_t k = 0; k < branchList.size(); k++){
     //for (std::vector::iterator it = branchList.begin(); it!= branchList.end(); ++it){
     //for (Double_t entry : otherValues){
 Printf("test 1");
@@ -195,16 +183,16 @@ Printf("test 1");
       //if ((newBranch == 1 && branchList.at(k) == valueName) || ((branchList.at(k) != "run_number") && (branchList.at(k) != "n_runs") && (branchList.at(k) != valueName)))
 Printf("test 2");
       //if ((*it != "run_number") && (*it != "n_runs"))
-      if ((branchList[k] != "run_number") && (branchList[k] != "n_runs"))
+      if ((*ItA1 != "run_number") && (*ItA1 != "n_runs"))
       {
-        if (branchList[k] != valueName) {
-          Printf("Assigning other values to be saved, Iteration %d, branch name: %s, value: %f\n",k,(const char*) branchList[k],newOtherValues[k]);
+        if (*ItA1 != valueName) {
+ //         Printf("Assigning other values to be saved, branch name: %s, value: %f\n",(const char*) *ItA1, *ItC1);
           //if ((newBranch == 1) && (branchList.at(k) != valueName)) {
 Printf("test 3");
-          oldTree->SetBranchAddress(branchList[k],&oldOtherValues[k]);
-          new_otherValuesBranch.push_back(newTree->Branch(branchList.at(k),&newOtherValues.at(k)));
+          oldTree->SetBranchAddress(*ItA1, &(*ItB1));
+          //new_otherValuesBranch.push_back(newTree->Branch(branchList.at(k),&newOtherValues.at(k)));
 Printf("test 4");
-          //newTree->Branch(branchList[k],&newOtherValues[k]);
+          newTree->Branch(*ItA1, &(*ItC1));
         }
 Printf("test 5");
         //else {
@@ -217,12 +205,12 @@ Printf("test 5");
     oldTree->SetBranchAddress("n_runs",&old_nRuns);
     oldTree->SetBranchAddress(valueName,&old_value);
   }
-  //newTree->Branch("run_number",&new_runNumber);
-  //newTree->Branch("n_runs",    &new_nRuns);
-  //newTree->Branch(valueName,   &new_value);
-  TBranch *new_runNumberBranch = newTree->Branch("run_number",&new_runNumber);
-  TBranch *new_nRunsBranch     = newTree->Branch("n_runs",    &new_nRuns);
-  TBranch *new_dataBranch      = newTree->Branch(valueName,   &new_value);
+  newTree->Branch("run_number",&new_runNumber);
+  newTree->Branch("n_runs",    &new_nRuns);
+  newTree->Branch(valueName,   &new_value);
+  //TBranch *new_runNumberBranch = newTree->Branch("run_number",&new_runNumber);
+  //TBranch *new_nRunsBranch     = newTree->Branch("n_runs",    &new_nRuns);
+  //TBranch *new_dataBranch      = newTree->Branch(valueName,   &new_value);
   newTree->SetBranchStatus("*",1);
   oldTree->SetBranchStatus("*",1);
 
@@ -278,27 +266,34 @@ Printf("test 5");
       new_nRuns = old_nRuns;
       new_runNumber = old_runNumber;
     }
-    for (Int_t l = 0; l < branchList.size(); l++){
+    auto ItA2 = branchList.begin();
+    auto ItB2 = oldOtherValues.begin();
+    auto ItC2 = newOtherValues.begin();
+    while(ItA2 != branchList.end() || ItB2 != oldOtherValues.end() || ItC2 != newOtherValues.end()){
+      if(ItA2 != branchList.end()) ++ItA2;
+      if(ItB2 != oldOtherValues.end()) ++ItB2;
+      if(ItC2 != newOtherValues.end()) ++ItC2;
+    //for (Int_t l = 0; l < branchList.size(); l++){
       //if ((branchList.at(l) != "run_number") && (branchList.at(l) != "n_runs") && (branchList.at(l) != valueName)) { // Just checking for paranoia
-      if ((branchList[l] != "run_number") && (branchList[l] != "n_runs")) { // Just checking for paranoia
-        if ((added == true) && (branchList[l] != valueName)) {
-          Printf("A1, Storing new runnumber %d placeholder -999999 branch %d of other branch name %s\n",new_runNumber,l,(const char*)branchList[l]);
+      if ((*ItA2 != "run_number") && (*ItA2 != "n_runs")) { // Just checking for paranoia
+        if ((added == true) && (*ItA2 != valueName)) {
+          Printf("A1, Storing new runnumber %d placeholder -999999 branch of other branch name %s\n",new_runNumber,(const char*)*ItA2);
           Printf("A2, Adding placeholder new run values to other variables already known about\n");
           //newOtherValues.at(l) = -666666.0; // Placeholder values of other variables not explicitly being set during this pass, go ahead and write them down if this is a fresh "new" run number 
-          newOtherValues[l] = -666666.1;
+          *ItC2 = -666666.1;
         }
-        else if (branchList[l] != valueName) {
-          Printf("B1, Storing old run %d unmodified %d branch %s\n",old_runNumber,l,(const char*)branchList[l]);
+        else if (*ItA2 != valueName) {
+          Printf("B1, Storing old run %d unmodified branch %s\n",old_runNumber,(const char*)*ItA2);
           //BROKEN FIXME this seems to not be saving the old extra branches to this vector, has to do with vector set address of newStorage
-          newOtherValues[l] = oldOtherValues[l]; // Just copy the prior value
+          *ItC2 = *ItB2; // Just copy the prior value
           //newOtherValues.at(l) = -555555.1;
-          Printf("B2, Prior saved value = %f\n",oldOtherValues[l]);
-          Printf("B3, New saved value = %f\n",newOtherValues[l]);
+          Printf("B2, Prior saved value = %f\n",*ItB2);
+          Printf("B3, New saved value = %f\n",*ItC2);
         }
-        if ((newBranch == 1) && (branchList[l] == valueName)) {
-          Printf("C1, Storing new branch for branch %d prior run placeholder -999999 branch name %s\n",l,(const char*)branchList[l]);
+        if ((newBranch == 1) && (*ItA2 == valueName)) {
+          Printf("C1, Storing new branch for branch prior run placeholder -999999 branch name %s\n",(const char*)*ItA2);
           Printf("C2, Overwriting default initialized blank 0 with -999999 for run %d, branch %s\n",old_runNumber,(const char*)valueName);
-          newOtherValues[l] = -777777.1; // Placeholder values of other variables which were previously left unset, loop through and write them when a "new" value appears in the root file, overwrite ^ else
+          *ItC2 = -777777.1; // Placeholder values of other variables which were previously left unset, loop through and write them when a "new" value appears in the root file, overwrite ^ else
         }
       }
     }
@@ -310,10 +305,10 @@ Printf("test 5");
     entryN++;
   }
   if (bNewFile) {
-    newTree->Write("agg");
+      newTree->Write("agg");
   }
   else {
-    newTree->Write("agg",TObject::kWriteDelete,0);
+      newTree->Write("agg",TObject::kWriteDelete,0);
   }
   aggregatorFile->Close();
 }
