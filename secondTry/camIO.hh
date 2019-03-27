@@ -125,195 +125,188 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   // Store all trees
   TString aggregatorFileName = "run_aggregator.root";
   TString pwd                = gSystem->Getenv("PWD");
-  Bool_t bNewFile            = gSystem->AccessPathName(pwd+"/"+aggregatorFileName); // Opposite return convention
+  Bool_t newFile             = gSystem->AccessPathName(pwd+"/"+aggregatorFileName); // Opposite return convention
   TFile *aggregatorFile      = new TFile(aggregatorFileName,"UPDATE");
   aggregatorFile->cd();
   TTree *oldTree;
   TTree *newTree;
-  //TTree *copyTree;
+
+  // If the user adds an entry or branch then behave differently
+  Bool_t newBranch = false;
 
   // Get environment variables
   new_runNumber = getRunNumber_h(new_runNumber);
   new_nRuns     = getNruns_h(new_nRuns);
 
   // Placeholder variables for reading of root file
-  Int_t    old_runNumber = 0;
-  Int_t    old_nRuns     = -1;
-  Double_t old_value     = -888888.1;
-
-  // Store user passed values for testing and saving later
-  Int_t runNumber = new_runNumber;
-  Int_t nRuns     = new_nRuns;
-  Double_t value  = new_value;
-  std::vector<Double_t> oldOtherValues;
-  std::vector<Double_t> newOtherValues;
-  std::vector<TBranch*> new_otherValuesBranch;
+  // Store the existing data in here per event
+  std::vector<Double_t> tempValues;
+  // Variables to be assigned to branch addresses
+  std::vector<Double_t> oldValues;
+  std::vector<Double_t> newValues;
+  // List of branch names, append with new user additions
   std::vector<TString> branchList;
-  oldOtherValues.clear();
-  newOtherValues.clear();
-  new_otherValuesBranch.clear();
-  branchList.clear();
-  Int_t newBranch = 0;
+  std::vector<TBranch*>newBranches;
 
-  if (bNewFile) {
+  if (newFile) {
     // Write a new file
     oldTree = new TTree("agg","Aggregator Tree");
-    Printf("Making new aggregator tree\n");
-    newTree = new TTree("agg","Aggregator Tree");
+    //Printf("Making new aggregator tree");
+    branchList.push_back("run_number");
+    branchList.push_back("n_runs");
+    newValues.push_back( -999999.0); // Vectors have to be initialized, and I don't know how many entries will come, so go for all of them
+    newValues.push_back( -999999.0);
+    tempValues.push_back(-999999.0);
+    oldValues.push_back( -999999.0); 
+    oldValues.push_back( -999999.0); 
+    tempValues.push_back(-999999.0); 
   }
   else {
-    // Open existing file and copy the existing branches that aren't being
-    // updated so that we can preserve the tree structure
-    oldTree    = (TTree*) aggregatorFile->Get("agg");
-    //branchList = getAggregateVars_h(oldTree);
-    if (!(std::find(branchList.begin(),branchList.end(),valueName)!=branchList.end())){
-      Printf("User adding new branch: %s\n",(const char*)valueName);
-      branchList.push_back(valueName);
-      newBranch = 1;
+    // Open existing file 
+    oldTree = (TTree*) aggregatorFile->Get("agg");
+	  //if (oldTree->IsZombie()) { Printf("ERROR, tree agg is dead");}
+	  if (!oldTree) {
+      Printf("ERROR, tree agg is dead");
     }
-  //  else{
-  //    Printf("User adding new test branch\n");
-  //    branchList.push_back("test");
-  //    newBranch = 0;
-  //  }
-    //branchList.push_back("test");
-    Printf("Appending to aggregator tree\n");
-    //copyTree = oldTree->CloneTree();
-    //copyTree->SetBranchStatus("*",1); // FIXME This will cause new entries of unedited branches to = previous entry... ok, but be careful!!
-    //copyTree->SetBranchStatus("run_number",0);
-    //copyTree->SetBranchStatus("n_runs",0);
-    //copyTree->SetBranchStatus(valueName,0);
-    newTree = new TTree("agg","Aggregator Tree");
-    //newTree = copyTree->CloneTree(0);
-
-    for (Int_t k = 0; k < branchList.size(); k++){
-    //for (std::vector::iterator it = branchList.begin(); it!= branchList.end(); ++it){
-    //for (Double_t entry : otherValues){
-Printf("test 1");
-      newOtherValues.push_back(-899999.1);
-      oldOtherValues.push_back(-900000.1); // Vectors have to be initialized, and I don't know how many entries will come, so go for all of them
-      //if ((newBranch == 1 && branchList.at(k) == valueName) || ((branchList.at(k) != "run_number") && (branchList.at(k) != "n_runs") && (branchList.at(k) != valueName)))
-Printf("test 2");
-      //if ((*it != "run_number") && (*it != "n_runs"))
-      if ((branchList[k] != "run_number") && (branchList[k] != "n_runs"))
-      {
-        if (branchList[k] != valueName) {
-          Printf("Assigning other values to be saved, Iteration %d, branch name: %s, value: %f\n",k,(const char*) branchList[k],newOtherValues[k]);
-          //if ((newBranch == 1) && (branchList.at(k) != valueName)) {
-Printf("test 3");
-          oldTree->SetBranchAddress(branchList[k],&oldOtherValues[k]);
-          new_otherValuesBranch.push_back(newTree->Branch(branchList.at(k),&newOtherValues.at(k)));
-Printf("test 4");
-          //newTree->Branch(branchList[k],&newOtherValues[k]);
-        }
-Printf("test 5");
-        //else {
-        //  TBranch* aNewBranch = newTree->Branch(valueName, &newOtherValues.at(k));
-        //  new_otherValuesBranch.push_back(aNewBranch);
-        //}
-      }
+    //Printf("Making new aggregator tree");
+    //Printf("Reading tree %s",(const char*)oldTree->GetName());
+    TObjArray *aggVars = oldTree->GetListOfBranches();
+    //Printf("N entries = %d",aggVars->GetEntries());
+    for ( Int_t b = 0; b<aggVars->GetEntries(); b++){
+      TString found = (TString)(((TBranch*)(aggVars->At(b)))->GetName());
+      //Printf("In branch %s",(const char*)found);
+      branchList.push_back(found);
+      newValues.push_back(-999999.0);
+      oldValues.push_back(-999999.0);
+      tempValues.push_back(-999999.0);
     }
-    oldTree->SetBranchAddress("run_number",&old_runNumber);
-    oldTree->SetBranchAddress("n_runs",&old_nRuns);
-    oldTree->SetBranchAddress(valueName,&old_value);
+    for(Int_t iBranch = 0; iBranch < branchList.size(); iBranch++) {
+      //Printf("In branch %d : %s",iBranch,(const char*)branchList[iBranch]);
+    }
+    //Printf("Got agg contents");
   }
-  //newTree->Branch("run_number",&new_runNumber);
-  //newTree->Branch("n_runs",    &new_nRuns);
-  //newTree->Branch(valueName,   &new_value);
-  TBranch *new_runNumberBranch = newTree->Branch("run_number",&new_runNumber);
-  TBranch *new_nRunsBranch     = newTree->Branch("n_runs",    &new_nRuns);
-  TBranch *new_dataBranch      = newTree->Branch(valueName,   &new_value);
+
+  // Maybe do this here...
+  //newTree = (TTree*) aggregatorFile->Get("agg");
+  newTree = new TTree("agg","Aggregator Tree");
+
+  // Check to see if the value passed by the user to store exists yet, if not add it
+  if (!(std::find(branchList.begin(),branchList.end(),valueName)!=branchList.end())){
+    //Printf("User adding new branch: %s",(const char*)valueName);
+    //addAggregateVars_h(valueName,&branchList,&newValues,&oldValues);
+    branchList.push_back(valueName);
+    newValues.push_back(-999999.0);
+    oldValues.push_back(-999999.0);
+    tempValues.push_back(-999999.0);
+    newBranch = true;
+  }
+  // Loop over branches and assign their addresses to old and new tree
+  for (Int_t k = 0; k < branchList.size(); k++){
+    //Printf("Assigning values to be saved, Iteration %d, branch name: %s, manual blank initialization value: %f",k,(const char*) branchList[k],oldValues[k]);
+  	// If this is a new file then generate new branches for old and new
+  	if (newFile || (newBranch && (branchList[k]==valueName))){
+      oldTree->Branch(          branchList[k],&oldValues[k]); // Initialize a new branch, for placeholder purposes
+  	}
+  	else {
+  	  oldTree->SetBranchAddress(branchList[k],&oldValues[k]); // Set old branch addresses
+  	}
+    newTree->Branch(          branchList[k],&newValues[k]); // Mane new branches
+  }
   newTree->SetBranchStatus("*",1);
   oldTree->SetBranchStatus("*",1);
 
+  // Loop over all entries so far, find the one that I am adding if it is there, append otherwise, print all prior values in their respective places with appropriate placeholder values
+  Int_t  numEntries    = oldTree->GetEntries();
+  Int_t  entryN        = 0;     // Looping variable
+  // List of conditions
+  Bool_t userAddedNewEntry  = true; // Assume we are adding a new entry
+  Bool_t userEdittedOldEntry= false;
+  Bool_t writeNewEntry      = false;
+  Bool_t userAddedNewBranch = newBranch;
+  Bool_t copyOldEntry       = false;
+  Bool_t loopEnd            = false;
 
-  // LOOP over all entries so far, find the one that I am adding if it is there, append otherwise, print all prior values in their respective places
-  Int_t    numEntries = oldTree->GetEntries(); // Assume we add an entry
-  Bool_t   added      = false;
-  Int_t    entryN     = 0;
-  Bool_t   newN       = true;
-  //for (int i = 0; i < numEntries; i++) 
-  while (added==false)
-  { // Loop over the input file's entries and fill the new tree with the results of one of the leaves
-    Printf("Entry number %d\n",entryN);
-    oldTree->GetEntry(entryN);
-    newTree->GetEntry(entryN);
+  // 2) If userEdittedOldEntry then numEntries--
+  //      How to tell: if branchName == user branch name
+  //      Also means user didn't add a new entry
+  // 1) If userAddedNewEntry then numEntries..
+  //      either case write userPassedVariables to newValues[]
+  //      for non-userPassedVariables pass oldValues[] to newValues[]
+  // 3) If copyOldEntry then continue
+  //      for all variables copy oldValues[] to newValues[]
 
-   /* for (Int_t l = 0; l < branchList.size(); l++)
-    { // Loop over all entries and set to placeholder -999999.0, so the user notices missed entries
-      if ((branchList.at(l) != "run_number") && (branchList.at(l) != "n_runs") && (branchList.at(l) != valueName)) { // Just checking for paranoia
-        otherValues.at(l)=-999999.0;
-      }
-    }*/
-
-    if (old_runNumber == runNumber && old_nRuns == nRuns){ // overwriting original entry if duplicate input 
-      Printf("A: Overwriting runNumber %d, old value %f, new value %f\n",runNumber,old_value,value);
-      newN = false;
-      numEntries = numEntries-1; // No new entry will be added
-      // Overwrite prior file entry with new results
-      new_value     = value;
-      new_nRuns     = nRuns;
-      new_runNumber = runNumber;
-    }
-    else if (entryN == numEntries && newN == true){ // Adding new entrys to the numEntries+1 entry then break out of loop
-      Printf("B: Adding new runNumber %d, new value %f, new nRuns %d\n",runNumber,value,nRuns);
-      added = true; // End Loop
-      // Add new results
-      old_value     = value; // FIXME unnecessary?
-      old_nRuns     = nRuns;
-      old_runNumber = runNumber;
-      new_value     = value;
-      new_nRuns     = nRuns;
-      new_runNumber = runNumber;
-    }
-    else {
-      Printf("C: Copying old runNumber %d, old value %f, old nRuns %d\n",old_runNumber,old_value,old_nRuns);
-      // Loop through and save the other prior results from the root file into the new copy of it
-      if (newBranch == 1){
-        new_value = -909090.1;
-      }
-      else {
-        new_value = old_value;
-      }
-      new_nRuns = old_nRuns;
-      new_runNumber = old_runNumber;
+  //Printf("Looking at %d entries",numEntries);
+  while (entryN<=numEntries) {
+    //Printf("Examining Entry Number %d",entryN);
+	  oldTree->GetEntry(entryN);
+	  //newTree->GetEntry(entryN);
+    
+	  // Loop over all branches (FIXME (A) for the "new" user added value maybe initialize it differently?)
+	  // Set the "old" values to placeholder values
+    for (Int_t l = 0; l < branchList.size(); l++){
+      //Printf("NOTE: Examining branch %s = %f (old value)",(const char*) branchList[l],oldValues[l]);
+	    if (userAddedNewEntry && entryN==numEntries) {
+	      // Case 1
+	  	  // We are appending a new value to the end, or initializing an empty new root file
+        //Printf("User adding new value to root file: branch %s, value (new = %f, old = %f) runnumber %d",(const char*)valueName,new_value,oldValues[l],new_runNumber);
+        userEdittedOldEntry = false;
+        copyOldEntry        = false;
+  		  writeNewEntry       = true;
+  	  }
+	    // Check to see if we are on the requested new_runNumber, and if it is unique then behave differently
+	    if ( (branchList[l] == "run_number") && (oldValues[l]==(Double_t)new_runNumber) ){
+	    	// Case 2
+        // We are replacing a prior entry
+        //Printf("User editting value in root file: branch %s, value (new = %f, old = %f) runnumber %d",(const char*)valueName,new_value,oldValues[l],new_runNumber);
+		    userAddedNewEntry = false;
+        copyOldEntry      = false;
+		    writeNewEntry     = true;
+		    numEntries--;
+	    }
     }
     for (Int_t l = 0; l < branchList.size(); l++){
-      //if ((branchList.at(l) != "run_number") && (branchList.at(l) != "n_runs") && (branchList.at(l) != valueName)) { // Just checking for paranoia
-      if ((branchList[l] != "run_number") && (branchList[l] != "n_runs")) { // Just checking for paranoia
-        if ((added == true) && (branchList[l] != valueName)) {
-          Printf("A1, Storing new runnumber %d placeholder -999999 branch %d of other branch name %s\n",new_runNumber,l,(const char*)branchList[l]);
-          Printf("A2, Adding placeholder new run values to other variables already known about\n");
-          //newOtherValues.at(l) = -666666.0; // Placeholder values of other variables not explicitly being set during this pass, go ahead and write them down if this is a fresh "new" run number 
-          newOtherValues[l] = -666666.1;
-        }
-        else if (branchList[l] != valueName) {
-          Printf("B1, Storing old run %d unmodified %d branch %s\n",old_runNumber,l,(const char*)branchList[l]);
-          //BROKEN FIXME this seems to not be saving the old extra branches to this vector, has to do with vector set address of newStorage
-          newOtherValues[l] = oldOtherValues[l]; // Just copy the prior value
-          //newOtherValues.at(l) = -555555.1;
-          Printf("B2, Prior saved value = %f\n",oldOtherValues[l]);
-          Printf("B3, New saved value = %f\n",newOtherValues[l]);
-        }
-        if ((newBranch == 1) && (branchList[l] == valueName)) {
-          Printf("C1, Storing new branch for branch %d prior run placeholder -999999 branch name %s\n",l,(const char*)branchList[l]);
-          Printf("C2, Overwriting default initialized blank 0 with -999999 for run %d, branch %s\n",old_runNumber,(const char*)valueName);
-          newOtherValues[l] = -777777.1; // Placeholder values of other variables which were previously left unset, loop through and write them when a "new" value appears in the root file, overwrite ^ else
-        }
+      // If the user is currently writing an entry then assume all other values besides run_number and n_runs are not specified and leave them as oldValues initialization
+  	  if (writeNewEntry){
+  	    if ( branchList[l] == "run_number" ) { 
+          //Printf("NOTE: RunNumber %d getting written by user",new_runNumber);
+  	      tempValues[l] = (Double_t)new_runNumber;
+  	    }
+  	    else if ( branchList[l] == "n_runs" ) {
+          //Printf("NOTE: new_nRuns %d getting written by user",new_nRuns);
+  	      tempValues[l] = (Double_t)new_nRuns;
+  	    }
+  	    else if ( branchList[l] == valueName ) {
+          //Printf("NOTE: %s branch = %f getting written by user",(const char*) valueName,new_value);
+          tempValues[l] = (Double_t)new_value;
+	      }
+	  	  else {
+          //Printf("NOTE: %s branch = %f getting written by user",(const char*) branchList[l],oldValues[l]);
+          tempValues[l] = -999999.0; //oldValues[l] has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+  		  }
+        //Printf("Saving new values, Branch name %s, value %f",(const char*)branchList[l],oldValues[l]);
       }
+      else {
+        //Printf("Saving old values, Branch name %s, value %f",(const char*)branchList[l],oldValues[l]);
+	      // Otherwise just save the oldValues
+        tempValues[l] = oldValues[l];
+	    }
+	    newValues[l] = tempValues[l];
+      //Printf("Saving %s = %f, overwriting %f",(const char*)branchList[l],tempValues[l],oldValues[l]);
+	  }
+    // Reset the triggers for writing
+    writeNewEntry = false; 
+ 	  // And then be done writing the user passed input
+    if (newFile || entryN<=numEntries){
+	    newTree->Fill();  
     }
-    newTree->Fill();
-    if (entryN == numEntries && newN == false){ 
-      Printf("End loop\n");
-      added = true; // End Loop
-    }
-    entryN++;
+	  entryN++;
   }
-  if (bNewFile) {
+  if (newFile) {
     newTree->Write("agg");
   }
   else {
     newTree->Write("agg",TObject::kWriteDelete,0);
   }
+  newTree->Scan();
   aggregatorFile->Close();
 }
