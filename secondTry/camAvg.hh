@@ -43,7 +43,7 @@ void getAvg_leafHist_h(TString mode = "default", TString tree = "mul", TString b
   TString  rms = "rms_"+channel;
 
   gROOT->SetBatch(kTRUE);
-  //Printf("Leaf name: %s",(const char*)leafName);
+  Printf("Leaf name: %s",(const char*)leafName);
   Tree->Draw(Form("%s>>h1",(const char*)leafName));
   TH1 *h1 = (TH1*)gDirectory->Get("h1");
   
@@ -68,4 +68,5 @@ void getAvg_leafHist_h(TString mode = "default", TString tree = "mul", TString b
   Printf("Run %d rms %s: %f",runNumber,(const char*)rms,data_rms);
   writeFile_h(avg,data_avg,runNumber,nRuns);
   writeFile_h(rms,data_rms,runNumber,nRuns);
+  //writeFile_h("test",1.0,runNumber,nRuns);
 }
