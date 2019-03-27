@@ -16,7 +16,7 @@ void testTree(){//Int_t entry){
     //oldTree->SetName("old_agg");
     //newTree = oldTree->CloneTree();
     //oldTree->CopyAddresses(newTree, kFALSE);
-    newTree = (TTree*) aggregatorFile->Get("agg");
+  newTree = (TTree*) aggregatorFile->Get("agg");
     Printf("Reading tree %s\n",(const char*)oldTree->GetName());
     TObjArray *aggVars = oldTree->GetListOfBranches();
     Printf("N entries = %d\n",aggVars->GetEntries());//oldTree->GetListOfBranches()->GetEntries());
