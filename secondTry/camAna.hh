@@ -28,7 +28,7 @@ void writeMean_Loop_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0"
   writeFile_h(analysis,data_mean,runNumber,nRuns);
 }
 
-void writeInt_loop_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1){
+void writeInt_loop_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", Int_t runNumber = 0, Int_t nRuns = -1){
   runNumber = getRunNumber_h(runNumber);
   nRuns     = getNruns_h(nRuns);
   TString channel = tree + "_" + branch + "_" + leaf;
@@ -38,6 +38,16 @@ void writeInt_loop_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",
   TTree   *Tree   = Branch->GetTree();
   Int_t    numEntries = Tree->GetEntries();
 
+  TLeaf   *CutLeaf;
+  TLeaf   *CutBranch;
+  if (cut == "defaultCut" || cut == "default" || cut == "defaultCuts" || cut == "prex" || cut == "PREX"){
+    CutBranch = Tree->GetLeaf("ErrorFlag");
+    CutLeaf   = Branch->GetLeaf("Device_Error_Code");
+  }
+  else {
+    CutBranch = Tree->GetLeaf(tree,cut); // Assume the user passed a single branch (non-device) that they want to compare to == 0 for "good" cuts
+  }
+
   Double_t data     = 0.0;
   Int_t    n_data   = 0;
   TString  analysis = "integral_"+channel;
@@ -46,8 +56,10 @@ void writeInt_loop_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",
   for (int j = 0; j < numEntries; j++) 
   { // Loop over the input file's entries
     Tree->GetEntry(j);
-    data+=Leaf->GetValue(0);
-    n_data+=1;
+    if ( (cut == "noCut") || (cut != "noCut" && CutBranch->GetValue(0) == 0) ){
+      data+=Leaf->GetValue(0);
+      n_data+=1;
+    }
   }
   writeFile_h(analysis,data,runNumber,nRuns);
 }

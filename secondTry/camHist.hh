@@ -78,18 +78,21 @@ TH1 * getHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",
   if (!Leaf){
     return 0;
   }
-  TString leafName    = branch+"."+(TString)Leaf->GetName();
+  TString  leafName   = branch+"."+(TString)Leaf->GetName();
   TBranch *Branch     = Leaf->GetBranch();
   TTree   *Tree       = Branch->GetTree();
   Int_t    numEntries = Tree->GetEntries();
 
   gROOT->SetBatch(kTRUE);
-  //Printf("Leaf name: %s",(const char*)leafName);
+  Printf("Leaf name: %s",(const char*)leafName);
   Tree->Draw(Form("%s>>h1",(const char*)leafName),cut,"");
+  Printf("Tree->Draw(\"%s>>h1,%s,\"\")",(const char*)leafName,(const char*) cut);
   TH1 *h1 = (TH1*)gDirectory->Get("h1");
+  //Printf("Histogram mean = %f",h1->GetMean());
   TH1 *h2 = new TH1F();
   
   if (mode == "defaultHist" || mode == "default" || mode == "normal"){
+    Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
     return h1;
   }
   else if (mode == "clean" || mode == "manual"){
@@ -101,7 +104,7 @@ TH1 * getHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",
     h2 = rebinTH1_h(h1,mode,2,1,1000); // example use case of rebinTH1_h method
   }
 
-  //Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
+  Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
   return h2; 
 }
 
@@ -117,9 +120,9 @@ void writeInt_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0c
 void writeMean_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
   TString mean = "mean_" + branch + "_" + leaf;
   Double_t data_mean = 0.0;
-  data_mean = getHistogram_h(tree,branch,leaf,cut,mode,runNumber,nRuns)->GetMean();
+  data_mean = (Double_t)getHistogram_h(tree,branch,leaf,cut,mode,runNumber,nRuns)->GetMean();
 
-  //Printf("Run %d mean %s: %f",runNumber,(const char*)mean,data_integral);
+  Printf("Run %d mean %s: %f",runNumber,(const char*)mean,data_mean);
   writeFile_h(mean,data_mean,runNumber,nRuns);
 }
 
@@ -128,6 +131,6 @@ void writeRMS_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0c
   Double_t data_rms = 0.0;
 	data_rms = getHistogram_h(tree,branch,leaf,cut,mode,runNumber,nRuns)->GetRMS();
 
-  //Printf("Run %d RMS %s: %f",runNumber,(const char*)rms,data_integral);
+  Printf("Run %d RMS %s: %f",runNumber,(const char*)rms,data_rms);
   writeFile_h(rms,data_rms,runNumber,nRuns);
 }

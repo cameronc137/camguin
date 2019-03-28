@@ -92,9 +92,9 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
     for(Int_t j=0;j<4;j++){
       filenamebase = Form("%s/prex%s_%d.root",(const char *)fileNameBase,(const char *)daqConfigs[j],runNumber+i);
       filename     = filenamebase;
-      //Printf("Trying file name: %s\n",(const char*)filenamebase);
+      Printf("Trying file name: %s\n",(const char*)filenamebase);
       if ( !gSystem->AccessPathName(filename.Data()) ) {
-        //Printf("Found file name: %s\n",(const char*)filenamebase);
+        Printf("Found file name: %s\n",(const char*)filenamebase);
         foundFile = true;
         j=5; // Exit loop
       }
@@ -105,7 +105,7 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
     
     int split = 0;
     while ( !gSystem->AccessPathName(filename.Data()) ) {
-      //Printf("File added to Chain: \"%s\"\n",(const char*)filename);
+      Printf("File added to Chain: \"%s\"\n",(const char*)filename);
       chain->Add(filename);
       split++;
       filename = filenamebase + "_" + split + ".root";
@@ -115,7 +115,7 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
     Printf("Rootfile not found in %s with runs from %d to %d, check your config and rootfiles",(const char*)fileNameBase,runNumber,runNumber+n_runs-1);
     return 0;
   }
-  //printf("N Entries: %d",(int)chain->GetEntries());
+  printf("N Entries: %d",(int)chain->GetEntries());
   return chain;
 }
 TBranch * getBranch_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", Int_t runNumber = 0, Int_t nRuns = -1, TString filenamebase = "Rootfiles/"){
@@ -249,11 +249,10 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   Int_t  entryN        = 0;     // Looping variable
   // List of conditions
   Bool_t userAddedNewEntry  = true; // Assume we are adding a new entry
-  Bool_t userEdittedOldEntry= false;
-  Bool_t writeNewEntry      = false;
+  Bool_t writeEntry         = false;
   Bool_t editEntry          = false;
+  Bool_t nRunsCheck         = false;
   Bool_t userAddedNewBranch = newBranch;
-  Bool_t copyOldEntry       = false;
   Bool_t loopEnd            = false;
 
   // 2) If userEdittedOldEntry then numEntries--
@@ -279,9 +278,7 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
 	      // Case 1
 	  	  // We are appending a new value to the end, or initializing an empty new root file
         //Printf("User adding new value to root file: branch %s, value (new = %f, old = %f) runnumber %d",(const char*)valueName,new_value,oldValues[l],new_runNumber);
-        userEdittedOldEntry = false;
-        copyOldEntry        = false;
-  		  writeNewEntry       = true;
+  		  writeEntry = true;
   	  }
 	    // Check to see if we are on the requested new_runNumber, and if it is unique then behave differently
 	    if ( (branchList[l] == "run_number") && (oldValues[l]==(Double_t)new_runNumber) ){
@@ -289,16 +286,20 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
         // We are replacing a prior entry
         // Keep track of it being editted since it could also be a new branch situation
         //Printf("User editting value in root file: branch %s, value (new = %f, old = %f) runnumber %d",(const char*)valueName,new_value,oldValues[l],new_runNumber);
-		    userAddedNewEntry = false;
-        copyOldEntry      = false;
-		    writeNewEntry     = true;
-		    editEntry           = true;
-		    numEntries--;
+        //
+        nRunsCheck = true; // Loop through again and check for nRuns being duplicated too
 	    }
+      if ( nRunsCheck && (branchList[l] == "n_runs") && (oldValues[l]==(Double_t)new_nRuns) ){ // FIXME this relies on run_number being first in the list of things being checked in order for it to work, maybe set l=0 and add nRunsheck== false to run_number check?
+		    userAddedNewEntry = false;
+		    writeEntry        = true;
+		    editEntry         = true;
+        nRunsCheck        = false; // Reset so further runs can be analyzed too
+		    numEntries--;
+      }
     }
     for (Int_t l = 0; l < branchList.size(); l++){
       // If the user is currently writing an entry then assume all other values besides run_number and n_runs are not specified and leave them as oldValues initialization
-  	  if (writeNewEntry){
+  	  if (writeEntry){
   	    if ( branchList[l] == "run_number" ) { 
           //Printf("NOTE: RunNumber %d getting written by user",new_runNumber);
   	      tempValues[l] = (Double_t)new_runNumber;
@@ -332,7 +333,7 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
       oldValues[l] = -999999.0;
 	  }
     // Reset the triggers for writing
-    writeNewEntry = false; 
+    writeEntry = false; 
  	  // And then be done writing the user passed input
     if (newFile || entryN<=numEntries){
 	    newTree->Fill();  
