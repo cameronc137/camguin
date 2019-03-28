@@ -135,6 +135,7 @@ TLeaf * getLeaf_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",TSt
   nRuns     = getNruns_h(nRuns);
   TChain  * Chain   = getTree_h(tree, runNumber, nRuns, filenamebase);
   if (!Chain){
+    Printf("Error, tree %s missing",(const char*)(tree));
     return 0;
   }
   TBranch * Branch  = Chain->GetBranch(branch);
