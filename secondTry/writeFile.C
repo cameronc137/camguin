@@ -1,5 +1,5 @@
 #include "camguin.hh"
-void writeFile5(TString valueName = "value", Double_t new_value = 0.0, Int_t new_runNumber = 0, Int_t new_nRuns = -1){
+void writeFile(TString valueName = "value", Double_t new_value = 0.0, Int_t new_runNumber = 0, Int_t new_nRuns = -1){
   // Store all trees
   TString aggregatorFileName = "run_aggregator.root";
   TString pwd                = gSystem->Getenv("PWD");
@@ -101,6 +101,7 @@ void writeFile5(TString valueName = "value", Double_t new_value = 0.0, Int_t new
   Bool_t userAddedNewEntry  = true; // Assume we are adding a new entry
   Bool_t userEdittedOldEntry= false;
   Bool_t writeNewEntry      = false;
+  Bool_t editEntry          = false;
   Bool_t userAddedNewBranch = newBranch;
   Bool_t copyOldEntry       = false;
   Bool_t loopEnd            = false;
@@ -136,10 +137,12 @@ void writeFile5(TString valueName = "value", Double_t new_value = 0.0, Int_t new
 	    if ( (branchList[l] == "run_number") && (oldValues[l]==(Double_t)new_runNumber) ){
 	    	// Case 2
         // We are replacing a prior entry
+        // Keep track of it being editted since it could also be a new branch situation
         Printf("User editting value in root file: branch %s, value (new = %f, old = %f) runnumber %d",(const char*)valueName,new_value,oldValues[l],new_runNumber);
 		    userAddedNewEntry   = false;
         copyOldEntry        = false;
 		    writeNewEntry       = true;
+		    editEntry           = true;
 		    numEntries--;
 	    }
     }
@@ -160,7 +163,12 @@ void writeFile5(TString valueName = "value", Double_t new_value = 0.0, Int_t new
 	      }
 	  	  else {
           Printf("NOTE: %s branch = %f getting written by user",(const char*) branchList[l],oldValues[l]);
-          tempValues[l] = -999999.0; //oldValues[l] has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          if (userAddedNewBranch && !editEntry){
+            tempValues[l] = -999999.0; //oldValues[l] has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          }
+          else {
+            tempValues[l] = oldValues[l];// has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          }
   		  }
         Printf("Saving new values, Branch name %s, value %f",(const char*)branchList[l],oldValues[l]);
       }
@@ -171,6 +179,7 @@ void writeFile5(TString valueName = "value", Double_t new_value = 0.0, Int_t new
 	    }
 	    newValues[l] = tempValues[l];
       Printf("Saving %s = %f, overwriting %f",(const char*)branchList[l],tempValues[l],oldValues[l]);
+      oldValues[l] = -999999.0;
 	  }
     // Reset the triggers for writing
     writeNewEntry       = false; 

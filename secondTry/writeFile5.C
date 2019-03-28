@@ -160,7 +160,12 @@ void writeFile5(TString valueName = "value", Double_t new_value = 0.0, Int_t new
 	      }
 	  	  else {
           Printf("NOTE: %s branch = %f getting written by user",(const char*) branchList[l],oldValues[l]);
-          tempValues[l] = -999999.0; //oldValues[l] has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          if (userAddedNewBranch){
+            tempValues[l] = -999999.0; //oldValues[l] has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          }
+          else {
+            tempValues[l] = oldValues[l];// has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          }
   		  }
         Printf("Saving new values, Branch name %s, value %f",(const char*)branchList[l],oldValues[l]);
       }
@@ -171,6 +176,7 @@ void writeFile5(TString valueName = "value", Double_t new_value = 0.0, Int_t new
 	    }
 	    newValues[l] = tempValues[l];
       Printf("Saving %s = %f, overwriting %f",(const char*)branchList[l],tempValues[l],oldValues[l]);
+      oldValues[l] = -999999.0;
 	  }
     // Reset the triggers for writing
     writeNewEntry       = false; 

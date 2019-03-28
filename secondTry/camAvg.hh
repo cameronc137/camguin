@@ -4,7 +4,7 @@ void getAvg_Loop_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", T
   nRuns     = getNruns_h(nRuns);
   TString channel = tree + "_" + branch + "_" + leaf;
   // Make an instance of the relevant data source 
-  TLeaf   *Leaf   = getLeaf_h(tree,branch,leaf);
+  TLeaf   *Leaf   = getLeaf_h(tree,branch,leaf,runNumber,nRuns);
   TBranch *Branch = Leaf->GetBranch();
   TTree   *Tree   = Branch->GetTree();
   Int_t    numEntries = Tree->GetEntries();
@@ -30,6 +30,7 @@ void getAvg_leafHist_h(TString mode = "default", TString tree = "mul", TString b
   nRuns     = getNruns_h(nRuns);
 
   // Make an instance of the relevant data source 
+  Printf("test1");
   TLeaf   *Leaf   = getLeaf_h(tree,branch,leaf,runNumber,nRuns);
   TString leafName = branch+"."+(TString)Leaf->GetName();
   TBranch *Branch = Leaf->GetBranch();

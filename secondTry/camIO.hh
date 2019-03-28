@@ -41,7 +41,7 @@ void getAggregateVars_h(TTree * rootTree, std::vector<TString>* aggVars, std::ve
   //std::vector<TString> aggVars;
   //aggVars->clear();
 
-  Printf("Reading tree %s\n",(const char*)rootTree->GetName());
+  //Printf("Reading tree %s\n",(const char*)rootTree->GetName());
   TObjArray *branchList = rootTree->GetListOfBranches();
   TIter next(branchList);
   TBranch *brc;
@@ -50,20 +50,21 @@ void getAggregateVars_h(TTree * rootTree, std::vector<TString>* aggVars, std::ve
     TString found = brc->GetName();
     // Not sure if the line below is so smart...
     aggVars->push_back(found);
-    Printf("In branch %s\n",(const char*)found);
-    oldValues->push_back(-389898.0);
-    newValues->push_back(-387878.0);
+    //Printf("In branch %s\n",(const char*)found);
+    oldValues->push_back(-999999.0); // Add the other vectors simulatneously to avoid mis-mapping
+    newValues->push_back(-999999.0);
   }
 
   for(Int_t iBranch = 0; iBranch < aggVars->size(); iBranch++) {
-    Printf("In branch %d : %s\n",iBranch,(const char*)&aggVars[iBranch]);
+    //Printf("In branch %d : %s\n",iBranch,(const char*)&aggVars[iBranch]);
   }
 }
-void addAggregateVars_h(TString varName, std::vector<TString>* aggVars, std::vector<Double_t>* oldValues){
+void addAggregateVars_h(TString varName, std::vector<TString>* aggVars, std::vector<Double_t>* oldValues, std::vector<Double_t>* newValues){
 
-  Printf("Push back %s",(const char*)varName);
+  //Printf("Push back %s",(const char*)varName);
   aggVars->push_back(varName);
-  oldValues->push_back(-989898.0);
+  oldValues->push_back(-999999.0); // Add the other vectors simulatneously to avoid mis-mapping
+  newValues->push_back(-999999.0);
 }
 
       
@@ -75,15 +76,18 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
   filenamebase = gSystem->Getenv("QW_ROOTFILES");
   TString fileNameBase  = filenamebase; // placeholder string
   TChain *chain = new TChain(tree);
+  Bool_t foundFile = false;
 
   for(Int_t i = 0; i < (n_runs); i++){
 
     TString daqConfigs[4] = {"CH","INJ","ALL","_tedf"};
     for(Int_t j=0;j<4;j++){
       filenamebase = Form("%s/prex%s_%d.root",(const char *)fileNameBase,(const char *)daqConfigs[j],runNumber+i);
+      filename     = filenamebase;
       //Printf("Trying file name: %s\n",(const char*)filenamebase);
       if ( !gSystem->AccessPathName(filename.Data()) ) {
         //Printf("Found file name: %s\n",(const char*)filenamebase);
+        foundFile = true;
         j=5; // Exit loop
       }
     }
@@ -99,14 +103,20 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
       filename = filenamebase + "_" + split + ".root";
     }
   }
+  if (!foundFile){
+    Printf("Rootfile not found in %s with runs from %d to %d, check your config and rootfiles",(const char*)fileNameBase,runNumber,runNumber+n_runs-1);
+    return 0;
+  }
   //printf("N Entries: %d\n",(int)chain->GetEntries());
   return chain;
 }
 TBranch * getBranch_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", Int_t runNumber = 0, Int_t nRuns = -1, TString filenamebase = "Rootfiles/"){
-  //Printf("Found leaf: \"%s\"\n",(const char*)(tree+"."+branch+"."+leaf));
   runNumber = getRunNumber_h(runNumber);
   nRuns     = getNruns_h(nRuns);
   TChain  * Chain   = getTree_h(tree, runNumber, nRuns, filenamebase);
+  if (!Chain){
+    return 0;
+  }
   TBranch * Branch  = Chain->GetBranch(branch);
   return Branch;
 }
@@ -116,6 +126,9 @@ TLeaf * getLeaf_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",TSt
   runNumber = getRunNumber_h(runNumber);
   nRuns     = getNruns_h(nRuns);
   TChain  * Chain   = getTree_h(tree, runNumber, nRuns, filenamebase);
+  if (!Chain){
+    return 0;
+  }
   TBranch * Branch  = Chain->GetBranch(branch);
   TLeaf   * Leaf    = Branch->GetLeaf(leaf);
   return Leaf;
@@ -222,6 +235,7 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   Bool_t userAddedNewEntry  = true; // Assume we are adding a new entry
   Bool_t userEdittedOldEntry= false;
   Bool_t writeNewEntry      = false;
+  Bool_t editEntry          = false;
   Bool_t userAddedNewBranch = newBranch;
   Bool_t copyOldEntry       = false;
   Bool_t loopEnd            = false;
@@ -257,10 +271,12 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
 	    if ( (branchList[l] == "run_number") && (oldValues[l]==(Double_t)new_runNumber) ){
 	    	// Case 2
         // We are replacing a prior entry
+        // Keep track of it being editted since it could also be a new branch situation
         //Printf("User editting value in root file: branch %s, value (new = %f, old = %f) runnumber %d",(const char*)valueName,new_value,oldValues[l],new_runNumber);
 		    userAddedNewEntry = false;
         copyOldEntry      = false;
 		    writeNewEntry     = true;
+		    editEntry           = true;
 		    numEntries--;
 	    }
     }
@@ -281,7 +297,12 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
 	      }
 	  	  else {
           //Printf("NOTE: %s branch = %f getting written by user",(const char*) branchList[l],oldValues[l]);
-          tempValues[l] = -999999.0; //oldValues[l] has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          if (userAddedNewBranch && !editEntry){
+            tempValues[l] = -999999.0; //oldValues[l] has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          }
+          else {
+            tempValues[l] = oldValues[l];// has been replaced with the prior entry, and because this new branch has no value in the tree its just that prior value
+          }
   		  }
         //Printf("Saving new values, Branch name %s, value %f",(const char*)branchList[l],oldValues[l]);
       }
@@ -292,6 +313,7 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
 	    }
 	    newValues[l] = tempValues[l];
       //Printf("Saving %s = %f, overwriting %f",(const char*)branchList[l],tempValues[l],oldValues[l]);
+      oldValues[l] = -999999.0;
 	  }
     // Reset the triggers for writing
     writeNewEntry = false; 

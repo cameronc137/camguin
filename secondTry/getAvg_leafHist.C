@@ -4,14 +4,17 @@
 #include "camHist.hh"
 using namespace std;
 void getAvg_leafHist(TString mode = "default", TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1){
-  runNumber = getRunNumber_h(runNumber);
-  nRuns     = getNruns_h(nRuns);
-  TString channel = tree + "_" + branch + "_" + leaf;
+  runNumber           = getRunNumber_h(runNumber);
+  nRuns               = getNruns_h(nRuns);
+  TString channel     = tree + "_" + branch + "_" + leaf;
   // Make an instance of the relevant data source 
-  TLeaf   *Leaf   = getLeaf_h(tree,branch,leaf,runNumber,nRuns);
-  TString leafName = branch+"."+(TString)Leaf->GetName();
-  TBranch *Branch = Leaf->GetBranch();
-  TTree   *Tree   = Branch->GetTree();
+  TLeaf   *Leaf       = getLeaf_h(tree,branch,leaf,runNumber,nRuns);
+  if (!Leaf){
+    return 0;
+  }
+  TString leafName    = branch+"."+(TString)Leaf->GetName();
+  TBranch *Branch     = Leaf->GetBranch();
+  TTree   *Tree       = Branch->GetTree();
   Int_t    numEntries = Tree->GetEntries();
 
   Double_t data_avg = 0.0;
