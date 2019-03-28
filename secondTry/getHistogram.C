@@ -3,7 +3,7 @@
 #include "camIO.hh"
 #include "camHist.hh"
 using namespace std;
-void getAvg_leafHist(TString mode = "default", TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1){
+void getHistogram(TString mode = "default", TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1){
   runNumber           = getRunNumber_h(runNumber);
   nRuns               = getNruns_h(nRuns);
   TString channel     = tree + "_" + branch + "_" + leaf;
@@ -17,10 +17,7 @@ void getAvg_leafHist(TString mode = "default", TString tree = "mul", TString bra
   TTree   *Tree       = Branch->GetTree();
   Int_t    numEntries = Tree->GetEntries();
 
-  Double_t data_avg = 0.0;
-  Double_t data_rms = 0.0;
-  TString  avg = "avg_"+channel;
-  TString  rms = "rms_"+channel;
+  Double_t data_integral = 0.0;
 
   gROOT->SetBatch(kTRUE);
   Printf("Leaf name: %s",(const char*)leafName);
@@ -28,24 +25,20 @@ void getAvg_leafHist(TString mode = "default", TString tree = "mul", TString bra
   TH1 *h1 = (TH1*)gDirectory->Get("h1");
   
   if (mode == "default"){
-	  data_avg = h1->GetMean();
-	  data_rms = h1->GetRMS();
+	  data_integral = h1->GetMean();
   }
   else if (mode == "clean" || mode == "manual"){
     TH1 *h2 = rebinTH1_h(h1,mode,2,1,1000); // example use case of rebinTH1_h method
     TString h2_name = h2->GetName();
     Tree->Draw(Form("%s>>%s",(const char*)leafName,(const char*)h2_name)); // Manual
-	  data_avg = h2->GetMean();
-	  data_rms = h2->GetRMS();
+	  data_integral = h2->GetMean();
   }
   else if (mode == "auto" || mode == "loop"){
     TH1 *h2 = rebinTH1_h(h1,mode,2,1,1000); // example use case of rebinTH1_h method
-	  data_avg = h2->GetMean();
-	  data_rms = h2->GetRMS();
+	  data_integral = h2->GetMean();
   }
 
-  Printf("Run %d avg %s: %f",runNumber,(const char*)avg,data_avg);
-  Printf("Run %d rms %s: %f",runNumber,(const char*)rms,data_rms);
-  writeFile_h(avg,data_avg,runNumber,nRuns);
-  writeFile_h(rms,data_rms,runNumber,nRuns);
+  Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
+  TCanvas * c2 = new TCanvas();
+  h2->Draw();
 }

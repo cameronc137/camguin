@@ -138,7 +138,15 @@ TLeaf * getLeaf_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",TSt
     return 0;
   }
   TBranch * Branch  = Chain->GetBranch(branch);
+  if (!Branch){
+    Printf("Error, branch %s missing",(const char*)(tree+"_"+branch));
+    return 0;
+  }
   TLeaf   * Leaf    = Branch->GetLeaf(leaf);
+  if (!Leaf){
+    Printf("Error, leaf %s missing",(const char*)(tree+"_"+branch+"_"+leaf));
+    return 0;
+  }
   return Leaf;
 }
 

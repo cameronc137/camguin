@@ -3,7 +3,7 @@
 #include "camIO.hh"
 #include "camHist.hh"
 using namespace std;
-void getAvg_loop(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1){
+void getInt_loop(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", Int_t runNumber = 0, Int_t nRuns = -1){
   runNumber = getRunNumber_h(runNumber);
   nRuns     = getNruns_h(nRuns);
   TString channel = tree + "_" + branch + "_" + leaf;
@@ -15,8 +15,7 @@ void getAvg_loop(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TSt
 
   Double_t data     = 0.0;
   Int_t    n_data   = 0;
-  Double_t data_avg = 0.0;
-  TString  analysis = "avg_"+channel;
+  TString  analysis = "integral_"+channel;
   TBranch *dataBranch;
 
   for (int j = 0; j < numEntries; j++) 
@@ -25,6 +24,5 @@ void getAvg_loop(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TSt
     data+=Leaf->GetValue(0);
     n_data+=1;
   }
-  data_avg = data/(1.0*n_data);
-  writeFile_h(analysis,data_avg,runNumber,nRuns);
+  writeFile_h(analysis,data,runNumber,nRuns);
 }

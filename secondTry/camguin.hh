@@ -4,6 +4,6 @@
 #include <dirent.h>
 #include "camIO.hh"
 #include "camHist.hh"
-#include "camAvg.hh"
+#include "camAna.hh"
 using namespace std;
 
