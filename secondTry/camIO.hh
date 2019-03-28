@@ -92,9 +92,9 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
     for(Int_t j=0;j<4;j++){
       filenamebase = Form("%s/prex%s_%d.root",(const char *)fileNameBase,(const char *)daqConfigs[j],runNumber+i);
       filename     = filenamebase;
-      Printf("Trying file name: %s\n",(const char*)filenamebase);
+      //Printf("Trying file name: %s\n",(const char*)filenamebase);
       if ( !gSystem->AccessPathName(filename.Data()) ) {
-        Printf("Found file name: %s\n",(const char*)filenamebase);
+        //Printf("Found file name: %s\n",(const char*)filenamebase);
         foundFile = true;
         j=5; // Exit loop
       }
@@ -105,7 +105,7 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
     
     int split = 0;
     while ( !gSystem->AccessPathName(filename.Data()) ) {
-      Printf("File added to Chain: \"%s\"\n",(const char*)filename);
+      //Printf("File added to Chain: \"%s\"\n",(const char*)filename);
       chain->Add(filename);
       split++;
       filename = filenamebase + "_" + split + ".root";
@@ -115,7 +115,7 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
     Printf("Rootfile not found in %s with runs from %d to %d, check your config and rootfiles",(const char*)fileNameBase,runNumber,runNumber+n_runs-1);
     return 0;
   }
-  printf("N Entries: %d",(int)chain->GetEntries());
+  //Printf("N Entries: %d",(int)chain->GetEntries());
   return chain;
 }
 TBranch * getBranch_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", Int_t runNumber = 0, Int_t nRuns = -1, TString filenamebase = "Rootfiles/"){
@@ -346,6 +346,6 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   else {
     newTree->Write("agg",TObject::kWriteDelete,0);
   }
-  newTree->Scan();
+  //newTree->Scan();
   aggregatorFile->Close();
 }

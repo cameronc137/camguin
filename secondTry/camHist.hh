@@ -55,7 +55,7 @@ TH1 * rebinTH1_h(TH1 * h1, TString mode = "manual", Int_t lookAbove = 0, Int_t l
 TString getCuts_h(TString cut = "defaultCut", Int_t overWriteCut = 0, TString branchToCheck = "asym_vqwk_04_0ch0"){
   TString defaultCut = "(ErrorFlag==0 && "+branchToCheck+".Device_Error_Code==0)"; // Make the default JAPAN cut on the user's given branch (assumes its a device ... excplicitly use noCut for non-device branches
   if (cut == "defaultCut" || cut == "default" || cut == "def" || cut == "defaultCuts" || cut == "prex" || cut == "PREX"){
-    Printf("Cut = %s",(const char*)defaultCut);
+    //Printf("Cut = %s",(const char*)defaultCut);
     return defaultCut; // Just return the default JAPAN cut
   }
   if (cut == "noCut" || cut == "1"){
@@ -68,11 +68,11 @@ TString getCuts_h(TString cut = "defaultCut", Int_t overWriteCut = 0, TString br
   return cut;
 }
 
-TH1 * getHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
+TH1 * getHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", Int_t overWriteCut = 0, TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
   runNumber           = getRunNumber_h(runNumber);
   nRuns               = getNruns_h(nRuns);
   TString channel     = tree + "_" + branch + "_" + leaf;
-  cut                 = getCuts_h(cut,0,branch);
+  cut                 = getCuts_h(cut,overWriteCut,branch);
   // Make an instance of the relevant data source 
   TLeaf   *Leaf       = getLeaf_h(tree,branch,leaf,runNumber,nRuns);
   if (!Leaf){
@@ -84,15 +84,15 @@ TH1 * getHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",
   Int_t    numEntries = Tree->GetEntries();
 
   gROOT->SetBatch(kTRUE);
-  Printf("Leaf name: %s",(const char*)leafName);
+  //Printf("Leaf name: %s",(const char*)leafName);
   Tree->Draw(Form("%s>>h1",(const char*)leafName),cut,"");
-  Printf("Tree->Draw(\"%s>>h1,%s,\"\")",(const char*)leafName,(const char*) cut);
+  //Printf("Tree->Draw(\"%s>>h1,%s,\"\")",(const char*)leafName,(const char*) cut);
   TH1 *h1 = (TH1*)gDirectory->Get("h1");
   //Printf("Histogram mean = %f",h1->GetMean());
   TH1 *h2 = new TH1F();
   
   if (mode == "defaultHist" || mode == "default" || mode == "normal"){
-    Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
+    //Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
     return h1;
   }
   else if (mode == "clean" || mode == "manual"){
@@ -104,33 +104,47 @@ TH1 * getHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",
     h2 = rebinTH1_h(h1,mode,2,1,1000); // example use case of rebinTH1_h method
   }
 
-  Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
+  //Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
   return h2; 
 }
 
-void writeInt_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
+void writeInt_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", Int_t overWriteCut = 0, TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
   TString integral = "integral_" + branch + "_" + leaf;
   Double_t data_integral = 0.0;
-	data_integral = getHistogram_h(tree,branch,leaf,cut,mode,runNumber,nRuns)->Integral();
+	data_integral = getHistogram_h(tree,branch,leaf,cut,0,mode,runNumber,nRuns)->Integral();
 
   //Printf("Run %d integral %s: %f",runNumber,(const char*)integral,data_integral);
   writeFile_h(integral,data_integral,runNumber,nRuns);
 }
 
-void writeMean_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
+void writeMeanRms_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", Int_t overWriteCut = 0, TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
   TString mean = "mean_" + branch + "_" + leaf;
   Double_t data_mean = 0.0;
-  data_mean = (Double_t)getHistogram_h(tree,branch,leaf,cut,mode,runNumber,nRuns)->GetMean();
+  TString rms = "rms_" + branch + "_" + leaf;
+  Double_t data_rms = 0.0;
+  data_mean = getHistogram_h(tree,branch,leaf,cut,0,mode,runNumber,nRuns)->GetMean();
+  data_rms = getHistogram_h(tree,branch,leaf,cut,0,mode,runNumber,nRuns)->GetRMS();
 
-  Printf("Run %d mean %s: %f",runNumber,(const char*)mean,data_mean);
+  //Printf("Run %d mean %s: %f",runNumber,(const char*)mean,data_mean);
+  //Printf("Run %d mean %s: %f",runNumber,(const char*)rms,data_rms);
+  writeFile_h(mean,data_mean,runNumber,nRuns);
+  writeFile_h(rms,data_rms,runNumber,nRuns);
+}
+
+void writeMean_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", Int_t overWriteCut = 0, TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
+  TString mean = "mean_" + branch + "_" + leaf;
+  Double_t data_mean = 0.0;
+  data_mean = getHistogram_h(tree,branch,leaf,cut,0,mode,runNumber,nRuns)->GetMean();
+
+  //Printf("Run %d mean %s: %f",runNumber,(const char*)mean,data_mean);
   writeFile_h(mean,data_mean,runNumber,nRuns);
 }
 
-void writeRMS_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
+void writeRMS_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", Int_t overWriteCut = 0, TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
   TString  rms = "rms_" + branch + "_" + leaf;
   Double_t data_rms = 0.0;
-	data_rms = getHistogram_h(tree,branch,leaf,cut,mode,runNumber,nRuns)->GetRMS();
+	data_rms = getHistogram_h(tree,branch,leaf,cut,0,mode,runNumber,nRuns)->GetRMS();
 
-  Printf("Run %d RMS %s: %f",runNumber,(const char*)rms,data_rms);
+  //Printf("Run %d RMS %s: %f",runNumber,(const char*)rms,data_rms);
   writeFile_h(rms,data_rms,runNumber,nRuns);
 }
