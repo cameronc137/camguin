@@ -16,6 +16,10 @@ Int_t getRunNumber_h(Int_t runNumber = 0){
     TString run = gSystem->Getenv("RUNNUM");
     runNumber = run.Atoi();
   }
+  if (runNumber<=0){
+    Printf("Error: Run Number given (%d) invalid, must be an integer > 0",runNumber);
+    return 0;
+  }
   //Printf("Run number: %d\n",runNumber);
   return runNumber;
 }
@@ -26,6 +30,10 @@ Int_t getNruns_h(Int_t n_runs = -1){
   { 
     TString nRuns = gSystem->Getenv("NRUNS");
     n_runs = nRuns.Atoi();
+  }
+  if (n_runs<=0){
+    Printf("Error: Number of Runs given (%d) invalid, must be an integer > 0 \n Tip: n_runs = 1 means you will only use 1 run, = 2 will TChain a second one on)",n_runs);
+    return 0;
   }
   //Printf("Number of Runs: %d\n",n_runs);
   return n_runs;
@@ -107,7 +115,7 @@ TChain * getTree_h(TString tree = "mul", Int_t runNumber = 0, Int_t n_runs = -1,
     Printf("Rootfile not found in %s with runs from %d to %d, check your config and rootfiles",(const char*)fileNameBase,runNumber,runNumber+n_runs-1);
     return 0;
   }
-  //printf("N Entries: %d\n",(int)chain->GetEntries());
+  //printf("N Entries: %d",(int)chain->GetEntries());
   return chain;
 }
 TBranch * getBranch_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", Int_t runNumber = 0, Int_t nRuns = -1, TString filenamebase = "Rootfiles/"){
@@ -177,7 +185,6 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   else {
     // Open existing file 
     oldTree = (TTree*) aggregatorFile->Get("agg");
-	  //if (oldTree->IsZombie()) { Printf("ERROR, tree agg is dead");}
 	  if (!oldTree) {
       Printf("ERROR, tree agg is dead");
     }
