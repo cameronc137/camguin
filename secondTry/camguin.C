@@ -9,6 +9,11 @@ void camguin(TString ana = "help", TString tree = "mul", TString branch = "asym_
     || ana == "INT" 
     || ana == "Int" 
     || ana == "int"){
+    //writeInt_loop_h( tree, branch, leaf, cut, runNumber, nRuns );
+    writeInt_leafHist_h( tree, branch, leaf, cut, runNumber, nRuns );
+  }
+  else if( 
+       ana == "intloop"){
     writeInt_loop_h( tree, branch, leaf, cut, runNumber, nRuns );
   }
   else if ( 
@@ -60,6 +65,20 @@ void camguin(TString ana = "help", TString tree = "mul", TString branch = "asym_
     || ana == "print"
     || ana == "P"
     || ana == "p"){
+    TH1* h1 = getHistogram_h( tree, branch, leaf, cut, overWriteCut, histMode, runNumber, nRuns );
+    gROOT->SetBatch(kFALSE);
+    h1->Draw();
+  }
+  else if (
+       ana == "redraw"
+    || ana == "RePrint"
+    || ana == "Reprint"
+    || ana == "rePrint"
+    || ana == "RP"
+    || ana == "Rp"
+    || ana == "rP"
+    || ana == "rp"
+    || ana == "reprint"){
     TH1* h1 = getHistogram_h( tree, branch, leaf, cut, overWriteCut, histMode, runNumber, nRuns );
     gROOT->SetBatch(kFALSE);
     h1->Draw();

@@ -108,10 +108,52 @@ TH1 * getHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0",
   return h2; 
 }
 
+TH1 * getWeightedHistogram_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString weight = "1", TString cut = "defaultCut", Int_t overWriteCut = 0, TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
+  runNumber           = getRunNumber_h(runNumber);
+  nRuns               = getNruns_h(nRuns);
+  TString channel     = tree + "_" + branch + "_" + leaf;
+  cut                 = getCuts_h(cut,overWriteCut,branch);
+  // Make an instance of the relevant data source 
+  TLeaf   *Leaf       = getLeaf_h(tree,branch,leaf,runNumber,nRuns);
+  if (!Leaf){
+    return 0;
+  }
+  TString  leafName   = branch+"."+(TString)Leaf->GetName();
+  TBranch *Branch     = Leaf->GetBranch();
+  TTree   *Tree       = Branch->GetTree();
+  Int_t    numEntries = Tree->GetEntries();
+
+  gROOT->SetBatch(kTRUE);
+  //Printf("Leaf name: %s",(const char*)leafName);
+  Tree->Draw(Form("%s>>h1",(const char*)leafName),weight+"*("+cut+")","");
+  //Printf("Tree->Draw(\"%s>>h1,%s,\"\")",(const char*)leafName,(const char*) cut);
+  TH1 *h1 = (TH1*)gDirectory->Get("h1");
+  //Printf("Histogram mean = %f",h1->GetMean());
+  TH1 *h2 = new TH1F();
+  
+  if (mode == "defaultHist" || mode == "default" || mode == "normal"){
+    //Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
+    return h1;
+  }
+  else if (mode == "clean" || mode == "manual"){
+    h2 = rebinTH1_h(h1,mode,2,1,1000); // example use case of rebinTH1_h method
+    TString h2_name = h2->GetName();
+    Tree->Draw(Form("%s>>%s",(const char*)leafName,(const char*)h2_name)); // Manual
+  }
+  else if (mode == "auto" || mode == "loop"){
+    h2 = rebinTH1_h(h1,mode,2,1,1000); // example use case of rebinTH1_h method
+  }
+
+  //Printf("Run %d histogram of branch %s returned",runNumber,(const char*)leafName);
+  return h2; 
+}
+
 void writeInt_leafHist_h(TString tree = "mul", TString branch = "asym_vqwk_04_0ch0", TString leaf = "hw_sum", TString cut = "defaultCut", Int_t overWriteCut = 0, TString mode = "defaultHist", Int_t runNumber = 0, Int_t nRuns = -1){
+  TString weight   = branch+"."+leaf;
   TString integral = "integral_" + branch + "_" + leaf;
   Double_t data_integral = 0.0;
-	data_integral = getHistogram_h(tree,branch,leaf,cut,0,mode,runNumber,nRuns)->Integral();
+	//data_integral = getHistogram_h(tree,branch,leaf,cut,0,mode,runNumber,nRuns)->Integral();
+	data_integral = getWeightedHistogram_h(tree,branch,leaf,weight,cut,0,mode,runNumber,nRuns)->Integral();
 
   //Printf("Run %d integral %s: %f",runNumber,(const char*)integral,data_integral);
   writeFile_h(integral,data_integral,runNumber,nRuns);
