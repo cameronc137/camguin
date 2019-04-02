@@ -239,7 +239,7 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   	else {
   	  oldTree->SetBranchAddress(branchList[k],&oldValues[k]); // Set old branch addresses
   	}
-    newTree->Branch(          branchList[k],&newValues[k]); // Mane new branches
+    newTree->Branch(            branchList[k],&newValues[k]); // Make new branches
   }
   newTree->SetBranchStatus("*",1);
   oldTree->SetBranchStatus("*",1);
