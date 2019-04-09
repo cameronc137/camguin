@@ -398,9 +398,41 @@ void writeFile_h(TString valueName = "value", Double_t new_value = 0.0, Int_t ne
   aggregatorFile->Close();
 }
 
+string replaceStrChar(string str, const string& replace, char ch) {
+
+  // set our locator equal to the first appearance of any character in replace
+  size_t found = str.find_first_of(replace);
+
+  while (found != string::npos) { // While our position in the sting is in range.
+    str[found] = ch; // Change the character at position.
+    found = str.find_first_of(replace, found+1); // Relocate again.
+  }
+
+  return str; // return our new string.
+}
+
+string stripStrChar(string str, const string& replace) {
+
+  // set our locator equal to the first appearance of any character in replace
+  size_t found = str.find_first_of(replace);
+
+  //Printf("Str: %s",str.c_str());
+  while (found != string::npos) { // While our position in the sting is in range.
+    for (int pos = 0; pos<str.size() - found; pos++){
+      str[found+pos] = str[found+pos+1]; // Change the character at position.
+    }
+    //str[str.size()-1]='\0';
+    str = str.substr(0, str.length()-1);
+    found = str.find_first_of(replace, found); // Relocate again.
+  }
+
+  return str; // return our new string.
+}
+
+
 void writePostPanFile_h(Int_t runNumber = 1369, TString filename = "run1369_summary.txt"){
   runNumber= getRunNumber_h(runNumber);
-  filename = Form("run%d_summary.txt",runNumber);
+  filename = Form("txt_out/run%d_regression_summary.txt",runNumber);
   char delim = '\t';
   vector<vector<string>> contents = textFileParse_h(filename,delim);
   int miniRun = 0;
@@ -413,23 +445,29 @@ void writePostPanFile_h(Int_t runNumber = 1369, TString filename = "run1369_summ
   vector <double> numbers;
 
   for (Int_t k = 0; k < contents.size(); k++){
-    if (contents[k][0].substr(0,3)==" --"){
+    //Printf("Contents pre trim: %s",contents[k][0].c_str());
+    contents[k][0]=stripStrChar(contents[k][0]," ");
+    //Printf("Contents post trim: %s",contents[k][0].c_str());
+    if (contents[k][0].substr(0,2)=="--"){
       //header line
-      if (contents[k][0].substr(0,13)==" --Mini-run: "){
-        string val = contents[k][0].substr(13,contents[k][0].size()-13);
-        Printf("Mini run %s",val.c_str());
+      if (contents[k][0].substr(0,11)=="--Mini-run:"){
+        string val = contents[k][0].substr(11,contents[k][0].size()-11);
+        //Printf("Mini-run: %s",val.c_str());
         miniRun=stof(val);
       }
-      Printf("Type: %s",contents[k][0].substr(3,23-5).c_str());
-      TString* testType = (TString*)contents[k][0].substr(3,8-3).c_str();;
-      Printf("Compare: %s",(const char*)testType);
-      if (!strcmp((const char*)testType,"Regre") || !strcmp((const char*)testType,"Slope") || !strcmp((const char*)testType,"Noise") || !strcmp((const char*)testType,"IV RM")){
+      //Printf("Type: %s",contents[k][0].substr(2,7-2).c_str());
+      TString* testType = (TString*)contents[k][0].substr(2,7-2).c_str();;
+      //Printf("Compare: %s",(const char*)testType);
+      if (!strcmp((const char*)testType,"Mini-") || !strcmp((const char*)testType,"Slope") || !strcmp((const char*)testType,"Noise") || !strcmp((const char*)testType,"IVRMS")){
         print  = false;
         header = true;
         manip.clear();
         numbers.clear();
-        type = contents[k][0].substr(3,8-3);
-        Printf("Type %s",type.c_str());
+        type = contents[k][0].substr(2,7-2);
+        if (!strcmp((const char*)testType,"Mini-")){
+          type = "Regressed";
+        }
+        //Printf("Type %s",type.c_str());
       }
       continue;
     }
@@ -438,10 +476,22 @@ void writePostPanFile_h(Int_t runNumber = 1369, TString filename = "run1369_summ
       print  = true;
       header = false;
       for (Int_t j = 0; j < contents[k].size(); j++){
-        TString* columnTitle = (TString*)contents[k][j].c_str();
+        contents[k][j]=stripStrChar(contents[k][j]," ");
+        TString* columnTitle = (TString*)contents[k][j].substr(0,contents[k][j].size()).c_str();
+
         if (strcmp((const char*)columnTitle,"")){ // if compare == true then return value is false and we skip onwards
-          Printf("Column Title %s",(const char*)columnTitle);
-          manip.push_back(contents[k][j]);
+          TString* columnTitle;
+          TString* columnCompare = (TString*)contents[k][j].substr(contents[k][j].size()-5,5).c_str();
+          //Printf("ColumnCompare: %s",(const char*)columnCompare);
+          if (!strcmp((const char*)columnCompare,"(ppm)")){
+            columnTitle = (TString*)contents[k][j].substr(0,contents[k][j].size()-5).c_str();
+            //Printf("Saved Truncated Title: %s",(const char*)columnTitle);
+          }
+          else {
+            columnTitle = (TString*)contents[k][j].substr(0,contents[k][j].size()).c_str();
+            //Printf("Title: %s",(const char*)columnTitle);
+          }
+          manip.push_back((const char*)columnTitle);
         }
       }
       continue;
@@ -452,15 +502,18 @@ void writePostPanFile_h(Int_t runNumber = 1369, TString filename = "run1369_summ
       Int_t offset = 0;
       channel = contents[k][0];
       TString* testType2 = (TString*)type.c_str();
-      if (!strcmp((const char*)testType2,"IV RM")){
-        channel = "IV_RMS";
-        offset = -1;
-      }
-      for (Int_t j = 1; j< contents[k].size(); j++){
-        // These are the matrix entries
-        string val = contents[k][j];
-        Printf("Number %s",val.c_str());
-        numbers.push_back(stof(val));
+      //if (!strcmp((const char*)testType2,"IVRMS")){
+      //  channel = "IVRMS";
+      //  offset = -1;
+      //}
+      for (Int_t j = 1+offset; j < contents[k].size(); j++){
+        if (strcmp(contents[k][j].c_str()," ")){ // if compare == true then return value is false and we skip onwards
+          // These are the matrix entries
+          // contents[k][j]=stripStrChar(contents[k][j]," "); // atof strips front whitespace and ignores trailing whitespace
+          string val = contents[k][j];
+          //Printf("Number %s",val.c_str());
+          numbers.push_back(stof(val));
+        }
       }
       // Add a new row to the data matrix
     }
